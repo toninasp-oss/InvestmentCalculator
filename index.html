@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#b9bdc2">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Investment Calculator</title>
+<style>
+  :root { color-scheme: light; font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-width: 280px; min-height: 100vh; background: linear-gradient(135deg,#e6e8ea,#c4c8cd); color: #1b1d20; }
+  main { width: min(100%, 520px); margin: 0 auto; padding: 6px; }
+  .calculator { padding: 8px; border: 1px solid #8f959b; border-radius: 12px; background: linear-gradient(145deg,#f3f4f4,#b7bcc1 54%,#dadddf); box-shadow: 0 8px 18px #48505a55, inset 0 1px #fff; }
+  .brand { margin: 0 3px 5px; }
+  h1 { margin: 0; font-size: .72rem; letter-spacing: .06em; font-weight: 800; }
+  .brand small { display:none; }
+  .screen { min-height: 94px; padding: 9px 12px 7px; border: 3px solid #6e766d; border-radius: 7px; background: linear-gradient(135deg,#d8e0cc,#b9c5ac); box-shadow: inset 0 2px 6px #4f594844, 0 1px #fff; text-align: right; }
+  .screen-meta { display: flex; justify-content: space-between; align-items: center; min-height: 17px; color: #3f493e; font: 700 .72rem/1 ui-monospace,Consolas,monospace; }
+  #expression { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #display { overflow: hidden; padding: 4px 0; color: #172018; font: 700 clamp(2.35rem,12vw,4.25rem)/1 ui-monospace,Consolas,monospace; letter-spacing: -.065em; white-space: nowrap; text-overflow: clip; }
+  #unit { min-width: 3.5em; text-align: right; }
+  .rate-panel { display: grid; grid-template-columns: 1fr auto; gap: 5px; align-items: center; margin: 7px 2px 6px; }
+  .rate-panel label { grid-column: 1 / -1; color: #474d52; font-size: .72rem; font-weight: 700; letter-spacing: .03em; }
+  .rate-panel input { width: 100%; min-width: 0; padding: 10px 11px; border: 1px solid #858c91; border-radius: 5px; background: #f9f9f7; color: #202327; font: 700 1rem ui-monospace,Consolas,monospace; box-shadow: inset 0 1px 2px #5553; }
+  .saved { color: #4e565a; font-size: .7rem; white-space: nowrap; }
+  .fx { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin: 0 2px 7px; }
+  button { min-height: clamp(54px,15vw,68px); border: 1px solid #555b61; border-radius: 6px; color: #f8f8f7; background: linear-gradient(#3f464c,#171b1f); box-shadow: inset 0 1px #ffffff42, 0 1px 1px #4c535966; font: 800 clamp(28px,8vw,32px)/1 system-ui,sans-serif; touch-action: manipulation; cursor: pointer; }
+  button:active { transform: translateY(1px); box-shadow: inset 0 2px 5px #0007; }
+  button:focus-visible, input:focus-visible { outline: 3px solid #e9a620; outline-offset: 2px; }
+  .fx button { min-height: 40px; color: #172018; border-color: #78825d; background: linear-gradient(#d7e3bd,#9bad7b); font-size: .88rem; }
+  .keypad { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); grid-template-areas: "clear back pct divide" "seven eight nine multiply" "four five six minus" "one two three plus" "zero double decimal equals"; gap: 3px; }
+  #clear { grid-area: clear; color: #fff; border-color: #963934; background: linear-gradient(#d7594f,#99251f); }
+  #back { grid-area: back; background: linear-gradient(#777d82,#42484d); }
+  #pct { grid-area: pct; }
+  [data-key="7"] { grid-area: seven; } [data-key="8"] { grid-area: eight; } [data-key="9"] { grid-area: nine; }
+  [data-key="4"] { grid-area: four; } [data-key="5"] { grid-area: five; } [data-key="6"] { grid-area: six; }
+  [data-key="1"] { grid-area: one; } [data-key="2"] { grid-area: two; } [data-key="3"] { grid-area: three; }
+  [data-key="0"] { grid-area: zero; } [data-key="00"] { grid-area: double; } [data-key="."] { grid-area: decimal; }
+  [data-op="÷"] { grid-area: divide; } [data-op="×"] { grid-area: multiply; } [data-op="−"] { grid-area: minus; }
+  [data-op="+"] { grid-area: plus; } #equals { grid-area: equals; }
+  button.op, #equals { color: #162031; border-color: #6c7889; background: linear-gradient(#d4dbe2,#99a7b5); }
+  [data-op="+"] { color: #fff; border-color: #526a86; background: linear-gradient(#5d7d9f,#365a80); font-size: clamp(28px,8vw,32px); }
+  .history { margin-top: 7px; border-top: 1px solid #91979c; }
+  .history summary { padding: 10px 2px; color: #40484e; font-size: .8rem; font-weight: 800; cursor: pointer; }
+  .history ul { max-height: 150px; margin: 0; padding: 0 4px 8px 24px; overflow: auto; color: #333b41; font: .8rem/1.5 ui-monospace,Consolas,monospace; }
+  @media (max-width: 360px) { main { padding: 3px; } .calculator { border-radius: 8px; padding: 6px; } button { min-height: 53px; font-size: 28px; } .screen { min-height: 88px; } }
+</style>
+<main>
+  <section class="calculator" aria-label="投資電卓">
+    <header class="brand"><h1>INVESTMENT CALCULATOR</h1></header>
+    <div class="screen" aria-live="polite">
+      <div class="screen-meta"><span id="expression"></span><span id="unit">—</span></div>
+      <div id="display">0</div>
+    </div>
+    <div class="rate-panel">
+      <label for="rate">USD/JPY レート</label>
+      <input id="rate" inputmode="decimal" placeholder="例: 150.25" aria-label="USD/JPY レート">
+      <span class="saved">端末保存</span>
+    </div>
+    <div class="fx"><button id="toJpy" aria-label="米ドルを円へ換算">USD → JPY</button><button id="toUsd" aria-label="円を米ドルへ換算">JPY → USD</button></div>
+    <div class="keypad" aria-label="計算キー">
+      <button id="clear" aria-label="クリア">C</button><button id="back" data-action="backspace" aria-label="1文字削除">▶</button><button id="pct" aria-label="パーセント">%</button><button class="op" data-op="÷" aria-label="除算">÷</button>
+      <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+      <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button class="op" data-op="×" aria-label="乗算">×</button>
+      <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button class="op" data-op="−" aria-label="減算">−</button>
+      <button data-key="0">0</button><button data-key="00">00</button><button data-key=".">.</button><button id="equals" aria-label="イコール">＝</button><button class="op" data-op="+" aria-label="加算">＋</button>
+    </div>
+    <details class="history"><summary>履歴</summary><ul id="history"></ul></details>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</html>
